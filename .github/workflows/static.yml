@@ -1,3 +1,4 @@
+
 name: Deploy static content to Pages
 
 on:
@@ -28,7 +29,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
-uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@v5
         with:
           path: '.'
           include-hidden-files: true
