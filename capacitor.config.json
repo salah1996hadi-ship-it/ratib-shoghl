@@ -1,0 +1,10 @@
+
+{
+  "appId": "io.github.salah1996hadi_ship_it.twa",
+  "appName": "رتّب شغلك",
+  "webDir": "www",
+  "backgroundColor": "#f5f7f3",
+  "android": {
+    "backgroundColor": "#f5f7f3"
+  }
+}
