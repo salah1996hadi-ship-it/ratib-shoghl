@@ -1,0 +1,68 @@
+
+name: Build Ratib Shoghl Android APK
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Prepare app files
+        shell: bash
+        run: |
+          mkdir -p www
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              .github/*|.well-known/*|android/*|www/*|package.json|capacitor.config.json|*.zip|*.keystore|*.md)
+                continue
+                ;;
+            esac
+            mkdir -p "www/$(dirname "$file")"
+            cp "$file" "www/$file"
+          done < <(git ls-files -z)
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync Android
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ratib-shoghl-android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
