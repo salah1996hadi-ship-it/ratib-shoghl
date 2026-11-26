@@ -1,5 +1,5 @@
 
-name: Build Ratib Shoghl Android APK
+name: Build Ratib Shoghl Android Release APK
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
           mkdir -p www
           while IFS= read -r -d '' file; do
             case "$file" in
-              .github/*|.well-known/*|android/*|www/*|package.json|capacitor.config.json|*.zip|*.keystore|*.md)
+              .github/*|.well-known/*|android/*|www/*|package.json|capacitor.config.json|*.zip|*.jks|*.md)
                 continue
                 ;;
             esac
@@ -51,15 +51,47 @@ jobs:
       - name: Sync Android
         run: npx cap sync android
 
-      - name: Build APK
+      - name: Decode signing keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/ratib-shoghl-release.jks
+          test -s android/app/ratib-shoghl-release.jks
+
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cat >> android/app/build.gradle <<'EOF'
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file("ratib-shoghl-release.jks")
+                      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          EOF
+
+      - name: Build signed Release APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
 
-      - name: Upload APK
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: ratib-shoghl-android-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: ratib-shoghl-signed-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
