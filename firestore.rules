@@ -1,11 +1,76 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
     function signedIn() {
       return request.auth != null;
     }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.uid == "yTqzdWBDH3M6ZMuEk7qoRJypCip2";
+    }
+
+    function validPlan() {
+      return
+        (request.resource.data.plan == "month"
+          && request.resource.data.price == 10000)
+        ||
+        (request.resource.data.plan == "twoMonths"
+          && request.resource.data.price == 18000)
+        ||
+        (request.resource.data.plan == "threeMonths"
+          && request.resource.data.price == 25000)
+        ||
+        (request.resource.data.plan == "year"
+          && request.resource.data.price == 50000);
+    }
+
     match /users/{userId}/{document=**} {
-      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read, write: if signedIn()
+        && request.auth.uid == userId;
+    }
+
+    match /trials/{userId} {
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && request.resource.data.keys().hasAll(['uid', 'startedAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'startedAt'])
+        && request.resource.data.startedAt == request.time;
+
+      allow read: if isAdmin()
+        || (signedIn() && request.auth.uid == userId);
+
+      allow update, delete: if false;
+    }
+
+    match /subscriptionRequests/{requestId} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == "pending"
+        && validPlan()
+        && request.resource.data.keys().hasAll([
+          'uid', 'email', 'ownerName', 'businessName',
+          'plan', 'price', 'status', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'ownerName', 'businessName',
+          'plan', 'price', 'status', 'createdAt'
+        ])
+        && request.resource.data.createdAt == request.time;
+
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.uid == request.auth.uid);
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /subscriptions/{userId} {
+      allow read: if isAdmin()
+        || (signedIn() && request.auth.uid == userId);
+
+      allow create, update, delete: if isAdmin();
     }
   }
 }
