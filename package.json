@@ -1,0 +1,17 @@
+
+{
+  "name": "ratib-shoghl",
+  "version": "1.0.0",
+  "private": true,
+  "description": "رتّب شغلك - تطبيق إدارة الأعمال",
+  "scripts": {
+    "build": "echo Android build"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.6.3",
+    "@capacitor/android": "8.6.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.3"
+  }
+}
